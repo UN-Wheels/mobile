@@ -1,5 +1,10 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:latlong2/latlong.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -56,7 +61,6 @@ class _RouteDetailPageState extends ConsumerState<RouteDetailPage> {
     final slotsAsync = ref.watch(routeSlotsProvider(widget.id));
 
     return Scaffold(
-      backgroundColor: AppColors.background,
       appBar: AppBar(title: const Text('Detalle de ruta')),
       body: routeAsync.when(
         loading: () => const Loading(message: 'Cargando ruta...'),
@@ -75,6 +79,8 @@ class _RouteDetailPageState extends ConsumerState<RouteDetailPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _RouteHeader(route: route),
+                    const SizedBox(height: 16),
+                    _MapSection(route: route),
                     const SizedBox(height: 16),
                     _DriverCard(route: route),
                     const SizedBox(height: 16),
@@ -107,6 +113,98 @@ class _RouteDetailPageState extends ConsumerState<RouteDetailPage> {
 }
 
 // ── Sub-widgets ───────────────────────────────────────────────────────────────
+
+class _MapSection extends StatefulWidget {
+  const _MapSection({required this.route});
+  final AppRoute route;
+
+  @override
+  State<_MapSection> createState() => _MapSectionState();
+}
+
+class _MapSectionState extends State<_MapSection> {
+  late final LatLng _origin;
+  late final LatLng _dest;
+  List<LatLng> _polyline = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _origin = LatLng(widget.route.origin.lat, widget.route.origin.lng);
+    _dest = LatLng(widget.route.destination.lat, widget.route.destination.lng);
+    _polyline = [_origin, _dest]; // straight line until route loads
+    _fetchRoute();
+  }
+
+  Future<void> _fetchRoute() async {
+    final url = Uri.parse(
+      'https://router.project-osrm.org/route/v1/driving'
+      '/${_origin.longitude},${_origin.latitude}'
+      ';${_dest.longitude},${_dest.latitude}'
+      '?overview=full&geometries=geojson',
+    );
+    final client = HttpClient();
+    try {
+      final request = await client.getUrl(url);
+      final response = await request.close();
+      if (response.statusCode != 200) return;
+      final body = await response.transform(utf8.decoder).join();
+      final data = jsonDecode(body) as Map<String, dynamic>;
+      final routes = data['routes'] as List?;
+      if (routes == null || routes.isEmpty) return;
+      final coords = routes.first['geometry']['coordinates'] as List;
+      final points = coords
+          .map<LatLng>((c) => LatLng((c[1] as num).toDouble(), (c[0] as num).toDouble()))
+          .toList();
+      if (mounted) setState(() => _polyline = points);
+    } catch (_) {
+      // keep straight-line fallback
+    } finally {
+      client.close();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: SizedBox(
+        height: 180,
+        child: FlutterMap(
+          options: MapOptions(
+            initialCameraFit: CameraFit.coordinates(
+              coordinates: [_origin, _dest],
+              padding: const EdgeInsets.all(48),
+            ),
+          ),
+          children: [
+            TileLayer(
+              urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+              userAgentPackageName: 'co.edu.unal.unwheels',
+            ),
+            PolylineLayer(
+              polylines: [
+                Polyline(points: _polyline, color: AppColors.primary, strokeWidth: 3),
+              ],
+            ),
+            MarkerLayer(
+              markers: [
+                Marker(
+                  point: _origin,
+                  child: const Icon(Icons.my_location, color: AppColors.primary, size: 26),
+                ),
+                Marker(
+                  point: _dest,
+                  child: const Icon(Icons.location_on, color: AppColors.secondary, size: 26),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 class _RouteHeader extends StatelessWidget {
   const _RouteHeader({required this.route});
@@ -318,9 +416,17 @@ class _SlotsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: const Border.fromBorderSide(BorderSide(color: AppColors.border)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
         const Text('Fechas disponibles', style: AppTextStyles.h4),
         const SizedBox(height: 12),
         slotsAsync.when(
@@ -389,7 +495,8 @@ class _SlotsSection extends StatelessWidget {
             );
           },
         ),
-      ],
+        ],
+      ),
     );
   }
 

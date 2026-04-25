@@ -20,7 +20,6 @@ class MyRoutesPage extends ConsumerWidget {
     final state = ref.watch(myRoutesProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
       appBar: AppBar(title: const Text('Mis rutas')),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push(RouteNames.publishRoute),
@@ -120,6 +119,10 @@ class _MyRouteCard extends ConsumerWidget {
     };
 
     return Card(
+      color: AppColors.white,
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
         onTap: () => context.push(RouteNames.routeDetailOf(route.id)),

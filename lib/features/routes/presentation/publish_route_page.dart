@@ -189,7 +189,6 @@ class _PublishRoutePageState extends ConsumerState<PublishRoutePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
       appBar: AppBar(title: const Text('Publicar ruta')),
       body: Stepper(
         currentStep: _step,

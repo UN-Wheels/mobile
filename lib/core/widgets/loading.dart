@@ -18,7 +18,7 @@ class Loading extends StatelessWidget {
             const SizedBox(height: 16),
             Text(
               message!,
-              style: const TextStyle(color: AppColors.textSecondary),
+              style: const TextStyle(color: Colors.white70),
             ),
           ],
         ],

@@ -22,7 +22,6 @@ class DashboardPage extends ConsumerWidget {
     final dashState = ref.watch(dashboardControllerProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -32,14 +31,14 @@ class DashboardPage extends ConsumerWidget {
               style: const TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
+                color: AppColors.white,
               ),
             ),
             const Text(
               'UNWheels',
               style: TextStyle(
                 fontSize: 12,
-                color: AppColors.textSecondary,
+                color: Colors.white70,
                 fontWeight: FontWeight.normal,
               ),
             ),
@@ -141,7 +140,7 @@ class _SectionHeader extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(title, style: AppTextStyles.h4),
+        Text(title, style: AppTextStyles.h4.copyWith(color: AppColors.white)),
         if (onSeeAll != null)
           TextButton(
             onPressed: onSeeAll,

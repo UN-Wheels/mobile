@@ -36,14 +36,13 @@ class _BookingsPageState extends ConsumerState<BookingsPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Mis reservas'),
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: AppColors.primary,
           labelColor: AppColors.primary,
-          unselectedLabelColor: AppColors.textSecondary,
+          unselectedLabelColor: Colors.white60,
           tabs: const [
             Tab(text: 'Pasajero'),
             Tab(text: 'Conductor'),
@@ -96,7 +95,7 @@ class _PassengerTabState extends ConsumerState<_PassengerTab>
           tabAlignment: TabAlignment.start,
           indicatorColor: AppColors.primary,
           labelColor: AppColors.primary,
-          unselectedLabelColor: AppColors.textSecondary,
+          unselectedLabelColor: Colors.white60,
           tabs: const [
             Tab(text: 'Pendientes'),
             Tab(text: 'Confirmadas'),
@@ -164,7 +163,7 @@ class _DriverTabState extends ConsumerState<_DriverTab>
           controller: _tab,
           indicatorColor: AppColors.primary,
           labelColor: AppColors.primary,
-          unselectedLabelColor: AppColors.textSecondary,
+          unselectedLabelColor: Colors.white60,
           tabs: const [
             Tab(text: 'Solicitudes'),
             Tab(text: 'Confirmadas'),
@@ -358,6 +357,10 @@ class _ReservationCard extends ConsumerWidget {
     };
 
     return Card(
+      color: AppColors.white,
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      clipBehavior: Clip.antiAlias,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(

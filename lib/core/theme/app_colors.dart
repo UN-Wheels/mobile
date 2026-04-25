@@ -33,6 +33,9 @@ abstract final class AppColors {
 
   static const Color white = Color(0xFFFFFFFF);
 
+  // Navigation / AppBar (matches web header #151b3d)
+  static const Color navBg = Color(0xFF151B3D);
+
   // Dark auth theme — matches web AuthLayout gradients
   static const Color authBg1 = Color(0xFF07091A);
   static const Color authBg2 = Color(0xFF0A0F28);

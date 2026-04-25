@@ -11,7 +11,20 @@ class DashboardShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: navigationShell,
+      backgroundColor: Colors.transparent,
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [AppColors.authBg1, AppColors.navBg, AppColors.secondary],
+            stops: [0.0, 0.5, 1.0],
+          ),
+        ),
+        child: navigationShell,
+      ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: navigationShell.currentIndex,
         onTap: (index) => navigationShell.goBranch(
@@ -47,8 +60,8 @@ class DashboardShell extends StatelessWidget {
           ),
         ],
         selectedItemColor: AppColors.primary,
-        unselectedItemColor: AppColors.textSecondary,
-        backgroundColor: AppColors.white,
+        unselectedItemColor: Colors.white54,
+        backgroundColor: AppColors.authBg2,
         type: BottomNavigationBarType.fixed,
         elevation: 8,
       ),

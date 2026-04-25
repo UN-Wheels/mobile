@@ -28,14 +28,14 @@ class DashboardReservation {
   final String travelDate;
 
   factory DashboardReservation.fromJson(Map<String, dynamic> json) {
-    final route = json['route'] as Map<String, dynamic>?;
-    final origin = route?['origin'] as String? ?? '';
-    final destination = route?['destination'] as String? ?? '';
+    final routeRaw = json['routeId'];
+    final route = routeRaw is Map<String, dynamic> ? routeRaw : null;
+    final origin = (route?['origin'] as Map<String, dynamic>?)?['name'] as String? ?? '';
+    final destination = (route?['destination'] as Map<String, dynamic>?)?['name'] as String? ?? '';
+    final routeId = (route?['_id'] ?? route?['id'] ?? json['routeId'])?.toString() ?? '';
     return DashboardReservation(
-      id: json['id']?.toString() ?? '',
-      routeId: (json['routeId'] ?? json['route_id'] ?? route?['id'])
-              ?.toString() ??
-          '',
+      id: (json['_id'] ?? json['id'] ?? '').toString(),
+      routeId: routeId,
       routeDescription: origin.isNotEmpty && destination.isNotEmpty
           ? '$origin → $destination'
           : 'Ruta',
@@ -60,19 +60,15 @@ class DashboardRoute {
   final String status;
 
   factory DashboardRoute.fromJson(Map<String, dynamic> json) {
-    final origin = json['origin'] as String? ?? '';
-    final destination = json['destination'] as String? ?? '';
+    final origin = (json['origin'] as Map<String, dynamic>?)?['name'] as String? ?? '';
+    final destination = (json['destination'] as Map<String, dynamic>?)?['name'] as String? ?? '';
     return DashboardRoute(
-      id: json['id']?.toString() ?? '',
+      id: (json['_id'] ?? json['id'] ?? '').toString(),
       description: origin.isNotEmpty && destination.isNotEmpty
           ? '$origin → $destination'
           : 'Ruta',
-      pricePerSeat:
-          ((json['pricePerSeat'] ?? json['price_per_seat']) as num?)
-              ?.toDouble() ??
-          0,
-      availableSeats:
-          (json['availableSeats'] ?? json['available_seats']) as int? ?? 0,
+      pricePerSeat: ((json['pricePerSeat'] ?? json['price_per_seat']) as num?)?.toDouble() ?? 0,
+      availableSeats: ((json['availableSeats'] ?? json['available_seats']) as num?)?.toInt() ?? 0,
       status: json['status'] as String? ?? 'active',
     );
   }

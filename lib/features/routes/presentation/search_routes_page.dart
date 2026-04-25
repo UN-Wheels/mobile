@@ -20,7 +20,6 @@ class SearchRoutesPage extends ConsumerWidget {
     final state = ref.watch(availableRoutesProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Buscar rutas'),
         actions: [

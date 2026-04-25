@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../theme/app_colors.dart';
 import 'app_button.dart';
 
 class EmptyState extends StatelessWidget {
@@ -25,13 +24,13 @@ class EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 64, color: AppColors.textHint),
+            Icon(icon, size: 64, color: Colors.white38),
             const SizedBox(height: 16),
             Text(
               message,
               textAlign: TextAlign.center,
               style: const TextStyle(
-                color: AppColors.textSecondary,
+                color: Colors.white60,
                 fontSize: 15,
               ),
             ),
