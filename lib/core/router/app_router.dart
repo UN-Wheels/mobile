@@ -8,6 +8,11 @@ import '../../features/auth/presentation/login_page.dart';
 import '../../features/auth/presentation/register_page.dart';
 import '../../features/dashboard/presentation/dashboard_page.dart';
 import '../../features/landing/presentation/landing_page.dart';
+import '../../features/reservations/presentation/bookings_page.dart';
+import '../../features/routes/presentation/my_routes_page.dart';
+import '../../features/routes/presentation/publish_route_page.dart';
+import '../../features/routes/presentation/route_detail_page.dart';
+import '../../features/routes/presentation/search_routes_page.dart';
 import '../theme/app_colors.dart';
 import 'dashboard_shell.dart';
 import 'route_names.dart';
@@ -35,27 +40,20 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const RegisterPage(),
       ),
 
-      // ── Full-screen (sobre el bottom nav) — implementados en fases 4–6 ───
+      // ── Full-screen (sobre el bottom nav) ─────────────────────────────────
       GoRoute(
         path: RouteNames.routeDetail,
-        builder: (context, state) => _Placeholder(
-          label: 'Ruta ${state.pathParameters['id']}',
-          icon: Icons.route,
+        builder: (context, state) => RouteDetailPage(
+          id: state.pathParameters['id']!,
         ),
       ),
       GoRoute(
         path: RouteNames.publishRoute,
-        builder: (context, state) => const _Placeholder(
-          label: 'Publicar ruta',
-          icon: Icons.add_road,
-        ),
+        builder: (context, state) => const PublishRoutePage(),
       ),
       GoRoute(
         path: RouteNames.myRoutes,
-        builder: (context, state) => const _Placeholder(
-          label: 'Mis rutas',
-          icon: Icons.list_alt_outlined,
-        ),
+        builder: (context, state) => const MyRoutesPage(),
       ),
       GoRoute(
         path: RouteNames.chatDetail,
@@ -82,10 +80,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: RouteNames.search,
-                builder: (context, state) => const _Placeholder(
-                  label: 'Buscar rutas',
-                  icon: Icons.search,
-                ),
+                builder: (context, state) => const SearchRoutesPage(),
               ),
             ],
           ),
@@ -93,10 +88,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: RouteNames.bookings,
-                builder: (context, state) => const _Placeholder(
-                  label: 'Reservas',
-                  icon: Icons.bookmark_outline,
-                ),
+                builder: (context, state) => const BookingsPage(),
               ),
             ],
           ),
@@ -128,8 +120,6 @@ final routerProvider = Provider<GoRouter>((ref) {
   );
 });
 
-// Escucha cambios en authControllerProvider y notifica al router para
-// que re-evalúe el redirect.
 class _RouterNotifier extends ChangeNotifier {
   _RouterNotifier(this._ref) {
     _ref.listen<AsyncValue<Object?>>(
@@ -142,8 +132,6 @@ class _RouterNotifier extends ChangeNotifier {
 
   String? redirect(BuildContext context, GoRouterState state) {
     final authState = _ref.read(authControllerProvider);
-
-    // No redirigir mientras carga la sesión inicial
     if (authState.isLoading) return null;
 
     final isAuthenticated = authState.valueOrNull != null;
@@ -160,7 +148,7 @@ class _RouterNotifier extends ChangeNotifier {
   }
 }
 
-// Widget provisional para rutas aún no implementadas (Fases 3–7)
+// Widget provisional para fases 5–7
 class _Placeholder extends StatelessWidget {
   const _Placeholder({required this.label, required this.icon});
 
@@ -185,10 +173,7 @@ class _Placeholder extends StatelessWidget {
                   ?.copyWith(color: AppColors.textSecondary),
             ),
             const SizedBox(height: 8),
-            const Text(
-              'Próximamente',
-              style: TextStyle(color: AppColors.textHint),
-            ),
+            const Text('Próximamente', style: TextStyle(color: AppColors.textHint)),
           ],
         ),
       ),
