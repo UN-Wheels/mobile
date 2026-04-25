@@ -1,0 +1,72 @@
+name: unwheels_mobile
+description: "App móvil de UNWheels — rideshare para la Universidad Nacional."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.7.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+
+  # State management
+  flutter_riverpod: ^2.6.1
+  riverpod_annotation: ^2.6.1
+
+  # Navigation
+  go_router: ^15.1.2
+
+  # HTTP Client
+  dio: ^5.8.0+1
+  cookie_jar: ^4.0.8
+  dio_cookie_manager: ^3.1.1
+
+  # Secure Storage (JWT)
+  flutter_secure_storage: ^9.2.4
+
+  # Real-time chat (Socket.IO 4.x)
+  socket_io_client: ^2.0.3+1
+
+  # Maps (OpenStreetMap — paridad con Leaflet web)
+  flutter_map: ^8.1.1
+  latlong2: ^0.9.1
+
+  # Models inmutables
+  freezed_annotation: ^2.4.4
+  json_annotation: ^4.9.0
+
+  # UI helpers
+  cached_network_image: ^3.4.1
+
+  # Internacionalización y fechas
+  intl: ^0.20.2
+  timeago: ^3.7.0
+
+  # Configuración por .env
+  flutter_dotenv: ^5.2.1
+
+  # Geolocalización (para LocationPicker)
+  geolocator: ^13.0.4
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+  # Code generation
+  build_runner: ^2.4.15
+  riverpod_generator: ^2.6.4
+  freezed: ^2.5.7
+  json_serializable: ^6.9.4
+
+  # Testing
+  mocktail: ^1.0.4
+
+flutter:
+  uses-material-design: true
+  assets:
+    - .env
+    - assets/images/logo.png
+    - assets/images/logotype.png
