@@ -100,7 +100,13 @@ class AppRoute {
 
   factory AppRoute.fromJson(Map<String, dynamic> json) => AppRoute(
         id: (json['_id'] ?? json['id'] ?? '').toString(),
-        driverId: (json['driverId'] ?? '').toString(),
+        // Gateway replaces driverId with driver:{...}; fall back to driver.email
+        driverId: (json['driverId'] ??
+                (json['driver'] is Map<String, dynamic>
+                    ? (json['driver'] as Map<String, dynamic>)['email']
+                    : null) ??
+                '')
+            .toString(),
         vehicleId: json['vehicleId']?.toString(),
         origin: RouteLocation.fromJson(
           json['origin'] as Map<String, dynamic>? ?? {'name': '', 'lat': 0, 'lng': 0},

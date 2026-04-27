@@ -1,16 +1,21 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../../../core/router/route_names.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_badge.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/loading.dart';
+import '../../auth/application/auth_controller.dart';
+import '../../chat/application/chat_providers.dart';
 import '../application/routes_providers.dart';
 import '../data/routes_api.dart';
 import '../domain/app_route.dart';
@@ -315,48 +320,158 @@ class _MetaChip extends StatelessWidget {
   }
 }
 
-class _DriverCard extends StatelessWidget {
+class _DriverCard extends ConsumerStatefulWidget {
   const _DriverCard({required this.route});
   final AppRoute route;
 
   @override
+  ConsumerState<_DriverCard> createState() => _DriverCardState();
+}
+
+class _DriverCardState extends ConsumerState<_DriverCard> {
+  bool _loading = false;
+
+  Future<void> _openChat() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final router = GoRouter.of(context);
+
+    final currentUser = ref.read(authControllerProvider).valueOrNull;
+    if (currentUser == null) return;
+
+    // Chat service uses JWT sub (email) as userId
+    final driverId = widget.route.driver?.email ?? widget.route.driverId;
+    final passengerId = currentUser.email;
+
+    if (driverId.isEmpty || passengerId.isEmpty || widget.route.id.isEmpty) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Datos de la ruta incompletos.')),
+      );
+      return;
+    }
+
+    if (driverId == passengerId) return; // own route
+
+    setState(() => _loading = true);
+    try {
+      final convId = await ref
+          .read(conversationsProvider.notifier)
+          .createOrGetConversation(
+            routeId: widget.route.id,
+            driverId: driverId,
+            passengerId: passengerId,
+          );
+
+      if (convId.isEmpty) {
+        messenger.showSnackBar(
+          const SnackBar(content: Text('No se pudo obtener la conversación.')),
+        );
+        return;
+      }
+
+      unawaited(router.push(RouteNames.chatDetailOf(convId)));
+    } catch (e) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('No se pudo abrir el chat: $e'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final driver = route.driver;
-    final name = driver?.displayName ?? route.driverId;
-    final initials = driver?.initials ?? (route.driverId.isNotEmpty ? route.driverId[0].toUpperCase() : '?');
+    final driver = widget.route.driver;
+    final name = driver?.displayName ?? widget.route.driverId;
+    final initials = driver?.initials ??
+        (widget.route.driverId.isNotEmpty
+            ? widget.route.driverId[0].toUpperCase()
+            : '?');
     final email = driver?.email;
+    final currentUser = ref.watch(authControllerProvider).valueOrNull;
+    final driverEmail = driver?.email ?? widget.route.driverId;
+    final isOwnRoute = driverEmail.isNotEmpty && driverEmail == currentUser?.email;
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(12),
-        border: const Border.fromBorderSide(BorderSide(color: AppColors.border)),
+        border: const Border.fromBorderSide(
+          BorderSide(color: AppColors.border),
+        ),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CircleAvatar(
-            radius: 22,
-            backgroundColor: AppColors.primary.withAlpha(30),
-            child: Text(
-              initials,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primaryDark),
-            ),
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 22,
+                backgroundColor: AppColors.primary.withAlpha(30),
+                child: Text(
+                  initials,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primaryDark,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(name, style: AppTextStyles.label),
+                    if (email != null)
+                      Text(email, style: AppTextStyles.bodySmall),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'Conductor verificado',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: AppColors.success,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(
+                Icons.verified_user_outlined,
+                color: AppColors.success,
+                size: 20,
+              ),
+            ],
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(name, style: AppTextStyles.label),
-                if (email != null)
-                  Text(email, style: AppTextStyles.bodySmall),
-                const SizedBox(height: 4),
-                const Text('Conductor verificado', style: TextStyle(fontSize: 11, color: AppColors.success, fontWeight: FontWeight.w500)),
-              ],
+          if (!isOwnRoute) ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _loading ? null : _openChat,
+                icon: _loading
+                    ? const SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppColors.primary,
+                        ),
+                      )
+                    : const Icon(Icons.chat_bubble_outline, size: 16),
+                label: Text(_loading ? 'Abriendo...' : 'Chat con conductor'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.primary,
+                  side: const BorderSide(color: AppColors.primary),
+                  minimumSize: const Size(0, 38),
+                ),
+              ),
             ),
-          ),
-          const Icon(Icons.verified_user_outlined, color: AppColors.success, size: 20),
+          ],
         ],
       ),
     );

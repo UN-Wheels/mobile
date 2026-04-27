@@ -1,11 +1,19 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../core/router/route_names.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_badge.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/loading.dart';
+import '../../auth/application/auth_controller.dart';
+import '../../chat/application/chat_providers.dart';
+import '../../notifications/application/notifications_providers.dart';
+import '../../notifications/domain/notification.dart';
 import '../application/reservations_providers.dart';
 import '../data/reservations_api.dart';
 import '../domain/reservation.dart';
@@ -35,6 +43,24 @@ class _BookingsPageState extends ConsumerState<BookingsPage>
 
   @override
   Widget build(BuildContext context) {
+    // Auto-refresh lists when a reservation notification arrives
+    ref.listen<AppNotification?>(incomingNotificationProvider, (_, notif) {
+      if (notif == null) return;
+      switch (notif.type) {
+        case NotificationType.reservationRequested:
+          ref.invalidate(driverRequestsProvider);
+        case NotificationType.reservationAccepted:
+        case NotificationType.reservationRejected:
+          ref.invalidate(passengerRequestsProvider);
+          ref.invalidate(passengerConfirmedProvider);
+        case NotificationType.routeDeleted:
+          ref.invalidate(passengerConfirmedProvider);
+          ref.invalidate(passengerHistoryProvider);
+        default:
+          break;
+      }
+    });
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Mis reservas'),
@@ -116,6 +142,7 @@ class _PassengerTabState extends ConsumerState<_PassengerTab>
                 provider: passengerConfirmedProvider,
                 emptyMessage: 'No tienes reservas confirmadas.',
                 emptyIcon: Icons.event_available_outlined,
+                showChatAction: true,
               ),
               _ReservationList(
                 provider: passengerHistoryProvider,
@@ -183,6 +210,7 @@ class _DriverTabState extends ConsumerState<_DriverTab>
                 provider: driverConfirmedProvider,
                 emptyMessage: 'No tienes reservas confirmadas.',
                 emptyIcon: Icons.check_circle_outline,
+                showChatAction: true,
               ),
             ],
           ),
@@ -201,6 +229,7 @@ class _ReservationList extends ConsumerWidget {
     required this.emptyIcon,
     this.showCancelAction = false,
     this.showAcceptRejectActions = false,
+    this.showChatAction = false,
   });
 
   final FutureProvider<List<Reservation>> provider;
@@ -208,6 +237,7 @@ class _ReservationList extends ConsumerWidget {
   final IconData emptyIcon;
   final bool showCancelAction;
   final bool showAcceptRejectActions;
+  final bool showChatAction;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -236,6 +266,7 @@ class _ReservationList extends ConsumerWidget {
               reservation: reservations[i],
               showCancelAction: showCancelAction,
               showAcceptRejectActions: showAcceptRejectActions,
+              showChatAction: showChatAction,
               onActionDone: () => ref.invalidate(provider),
             ),
           );
@@ -253,12 +284,14 @@ class _ReservationCard extends ConsumerWidget {
     required this.onActionDone,
     this.showCancelAction = false,
     this.showAcceptRejectActions = false,
+    this.showChatAction = false,
   });
 
   final Reservation reservation;
   final VoidCallback onActionDone;
   final bool showCancelAction;
   final bool showAcceptRejectActions;
+  final bool showChatAction;
 
   Future<void> _accept(BuildContext ctx, WidgetRef ref) async {
     try {
@@ -335,6 +368,40 @@ class _ReservationCard extends ConsumerWidget {
       ScaffoldMessenger.of(ctx).showSnackBar(
         const SnackBar(content: Text('Solicitud cancelada.')),
       );
+    } catch (e) {
+      if (!ctx.mounted) return;
+      ScaffoldMessenger.of(ctx).showSnackBar(
+        SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.error),
+      );
+    }
+  }
+
+  Future<void> _openChat(BuildContext ctx, WidgetRef ref) async {
+    final currentUser = ref.read(authControllerProvider).valueOrNull;
+    if (currentUser == null || !ctx.mounted) return;
+
+    // Chat service uses JWT sub (email) as userId
+    final driverId = reservation.route?.driver?.email ?? '';
+    final passengerId = currentUser.email;
+    final routeId = reservation.routeId;
+
+    if (driverId.isEmpty || passengerId.isEmpty || routeId.isEmpty) {
+      ScaffoldMessenger.of(ctx).showSnackBar(
+        const SnackBar(content: Text('No se puede abrir el chat.')),
+      );
+      return;
+    }
+
+    try {
+      final convId = await ref
+          .read(conversationsProvider.notifier)
+          .createOrGetConversation(
+            routeId: routeId,
+            driverId: driverId,
+            passengerId: passengerId,
+          );
+      if (!ctx.mounted) return;
+      unawaited(ctx.push(RouteNames.chatDetailOf(convId)));
     } catch (e) {
       if (!ctx.mounted) return;
       ScaffoldMessenger.of(ctx).showSnackBar(
@@ -508,6 +575,24 @@ class _ReservationCard extends ConsumerWidget {
                     minimumSize: const Size(0, 36),
                   ),
                   child: const Text('Cancelar solicitud'),
+                ),
+              ),
+            ],
+
+            // Chat button for confirmed reservations
+            if (showChatAction && reservation.isConfirmed) ...[
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () => _openChat(context, ref),
+                  icon: const Icon(Icons.chat_bubble_outline, size: 16),
+                  label: const Text('Abrir chat'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    side: const BorderSide(color: AppColors.primary),
+                    minimumSize: const Size(0, 36),
+                  ),
                 ),
               ),
             ],

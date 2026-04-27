@@ -25,10 +25,13 @@ class AuthInterceptor extends Interceptor {
     DioException err,
     ErrorInterceptorHandler handler,
   ) async {
-    if (err.response?.statusCode == 401) {
+    // Only invalidate the session when the auth service itself rejects the
+    // token (i.e. the /auth/* endpoints return 401). A 401 from an unrelated
+    // microservice (chat, routes…) must NOT wipe the stored token — doing so
+    // cascades into every subsequent request also losing auth.
+    final path = err.requestOptions.path;
+    if (err.response?.statusCode == 401 && path.startsWith('/auth')) {
       await _storage.deleteToken();
-      // El authControllerProvider (Fase 2) detectará el token eliminado
-      // y redirigirá al login vía go_router.
     }
     return handler.next(err);
   }

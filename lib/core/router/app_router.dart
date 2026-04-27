@@ -6,8 +6,13 @@ import 'package:go_router/go_router.dart';
 import '../../features/auth/application/auth_controller.dart';
 import '../../features/auth/presentation/login_page.dart';
 import '../../features/auth/presentation/register_page.dart';
+import '../../features/chat/presentation/chat_page.dart';
+import '../../features/chat/presentation/conversations_page.dart';
 import '../../features/dashboard/presentation/dashboard_page.dart';
 import '../../features/landing/presentation/landing_page.dart';
+import '../../features/notifications/presentation/notifications_page.dart';
+import '../../features/profile/presentation/profile_page.dart';
+import '../../features/routes/presentation/location_picker_page.dart';
 import '../../features/reservations/presentation/bookings_page.dart';
 import '../../features/routes/presentation/my_routes_page.dart';
 import '../../features/routes/presentation/publish_route_page.dart';
@@ -57,10 +62,17 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: RouteNames.chatDetail,
-        builder: (context, state) => _Placeholder(
-          label: 'Chat ${state.pathParameters['conversationId']}',
-          icon: Icons.chat_outlined,
+        builder: (context, state) => ChatPage(
+          conversationId: state.pathParameters['conversationId']!,
         ),
+      ),
+      GoRoute(
+        path: RouteNames.profile,
+        builder: (context, state) => const ProfilePage(),
+      ),
+      GoRoute(
+        path: '/location-picker',
+        builder: (context, state) => const LocationPickerPage(),
       ),
 
       // ── Dashboard shell con BottomNavigationBar ───────────────────────────
@@ -96,21 +108,15 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: RouteNames.chat,
-                builder: (context, state) => const _Placeholder(
-                  label: 'Conversaciones',
-                  icon: Icons.chat_bubble_outline,
-                ),
+                builder: (context, state) => const ConversationsPage(),
               ),
             ],
           ),
           StatefulShellBranch(
             routes: [
               GoRoute(
-                path: RouteNames.profile,
-                builder: (context, state) => const _Placeholder(
-                  label: 'Perfil',
-                  icon: Icons.person_outline,
-                ),
+                path: RouteNames.notifications,
+                builder: (context, state) => const NotificationsPage(),
               ),
             ],
           ),

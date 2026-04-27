@@ -14,7 +14,7 @@ class App extends ConsumerWidget {
     return MaterialApp.router(
       title: 'UNWheels',
       theme: AppTheme.light,
-      darkTheme: AppTheme.dark,
+      darkTheme: AppTheme.light,
       themeMode: ThemeMode.light,
       routerConfig: router,
       debugShowCheckedModeBanner: false,

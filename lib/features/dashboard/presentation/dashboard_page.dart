@@ -118,6 +118,10 @@ class DashboardPage extends ConsumerWidget {
 
               // ── CTA buscar ruta ─────────────────────────────────────────
               _SearchCta(onTap: () => context.push(RouteNames.search)),
+              const SizedBox(height: 12),
+
+              // ── CTA publicar ruta (conductores) ────────────────────────
+              _PublishCta(onTap: () => context.push(RouteNames.publishRoute)),
               const SizedBox(height: 16),
             ],
           ),
@@ -391,6 +395,59 @@ class _SearchCta extends StatelessWidget {
             Icon(
               Icons.search,
               color: AppColors.white,
+              size: 32,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PublishCta extends StatelessWidget {
+  const _PublishCta({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: AppColors.secondary.withAlpha(200),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.secondaryLight.withAlpha(80)),
+        ),
+        child: const Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '¿Ofreces rides?',
+                    style: TextStyle(
+                      color: AppColors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'Publica una ruta y lleva pasajeros',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.add_road,
+              color: AppColors.primary,
               size: 32,
             ),
           ],

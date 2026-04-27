@@ -16,6 +16,7 @@ abstract final class RouteNames {
   static const String publishRoute = '/publish';
   static const String myRoutes = '/my-routes';
   static const String chatDetail = '/chat/:conversationId';
+  static const String notifications = '/notifications';
 
   // Helpers para navegación con parámetros
   static String routeDetailOf(String id) => '/routes/$id';
