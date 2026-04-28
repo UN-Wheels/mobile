@@ -56,6 +56,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     final currentUser = ref.watch(authControllerProvider).valueOrNull;
 
     return Scaffold(
+      backgroundColor: AppColors.authBg2,
       appBar: AppBar(
         title: const Text('Chat'),
         leading: const BackButton(),

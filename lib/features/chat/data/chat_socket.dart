@@ -54,16 +54,12 @@ class ChatSocket {
 
     _socket?.dispose();
 
-    final apiBase = dotenv.env['API_BASE_URL'] ?? '';
-    final socketBase = apiBase.endsWith('/api')
-        ? apiBase.substring(0, apiBase.length - 4)
-        : apiBase;
+    final socketBase = dotenv.env['CHAT_SOCKET_URL'] ?? '';
 
     _socket = io.io(
       socketBase,
       io.OptionBuilder()
-          .setPath('/api/chat/socket.io')
-          .setTransports(['polling', 'websocket'])
+          .setTransports(['websocket'])
           .setAuth({'token': token})
           .setExtraHeaders({'authorization': 'Bearer $token'})
           .enableReconnection()
@@ -84,7 +80,9 @@ class ChatSocket {
     _socket!.on('message:new', (data) {
       if (_msgCtrl.isClosed) return;
       try {
-        _msgCtrl.add(ChatMessage.fromJson(Map<String, dynamic>.from(data as Map)));
+        final msg = ChatMessage.fromJson(Map<String, dynamic>.from(data as Map));
+        debugPrint('[SOCKET] message:new recibido → id=${msg.id} conv=${msg.conversationId} sender=${msg.senderId}');
+        _msgCtrl.add(msg);
       } catch (e) {
         debugPrint('message:new parse error: $e');
       }

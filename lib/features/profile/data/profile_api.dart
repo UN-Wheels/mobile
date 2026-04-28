@@ -39,10 +39,10 @@ class ProfileApi {
     throw const ServerException('Respuesta de perfil invalida.');
   }
 
-  Future<List<Vehicle>> getMyVehicles(String userId) async {
+  Future<List<Vehicle>> getMyVehicles() async {
     try {
-      // The Python vehicles endpoint uses /{owner_id: int} — avoid /me
-      final res = await _dio.get<dynamic>('/vehicles/$userId');
+      // GET /vehicles — returns the authenticated user's vehicles via JWT
+      final res = await _dio.get<dynamic>('/vehicles');
       final data = res.data;
       if (data is List) {
         return data.whereType<Map<String, dynamic>>().map(Vehicle.fromJson).toList();

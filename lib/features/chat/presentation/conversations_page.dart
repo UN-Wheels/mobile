@@ -30,6 +30,7 @@ class _ConversationsPageState extends ConsumerState<ConversationsPage> {
     final convsAsync = ref.watch(conversationsProvider);
 
     return Scaffold(
+      backgroundColor: AppColors.authBg2,
       appBar: AppBar(title: const Text('Mensajes')),
       body: convsAsync.when(
         loading: () => const Loading(message: 'Cargando conversaciones...'),
@@ -52,7 +53,7 @@ class _ConversationsPageState extends ConsumerState<ConversationsPage> {
             onRefresh: () => ref.refresh(conversationsProvider.future),
             child: ListView.separated(
               itemCount: conversations.length,
-              separatorBuilder: (_, _) => const Divider(
+              separatorBuilder: (_, __) => const Divider(
                 height: 1,
                 indent: 72,
                 color: Colors.white12,
@@ -144,7 +145,32 @@ class _ConversationTile extends StatelessWidget {
                         ),
                     ],
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 3),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: isDriver
+                              ? AppColors.info.withAlpha(35)
+                              : AppColors.primary.withAlpha(35),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          isDriver ? 'Conductor' : 'Pasajero',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: isDriver
+                                ? AppColors.info
+                                : AppColors.primary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 3),
                   Text(
                     conversation.lastMessageText ?? 'Sin mensajes aún',
                     style: TextStyle(

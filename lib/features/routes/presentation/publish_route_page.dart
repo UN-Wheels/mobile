@@ -11,7 +11,7 @@ import '../../vehicles/presentation/add_vehicle_sheet.dart';
 import '../data/routes_api.dart';
 import 'location_picker_page.dart';
 
-enum _AvailKind { none, specificDate, weekly }
+enum _AvailKind { specificDate, weekly }
 
 class PublishRoutePage extends ConsumerStatefulWidget {
   const PublishRoutePage({super.key});
@@ -38,11 +38,10 @@ class _PublishRoutePageState extends ConsumerState<PublishRoutePage> {
   Vehicle? _selectedVehicle;
 
   // Step 3 — availability
-  _AvailKind _availKind = _AvailKind.none;
+  _AvailKind _availKind = _AvailKind.specificDate;
 
-  // Specific date option
-  DateTime? _specificDate;
-  final _specificSeatsCtrl = TextEditingController(text: '1');
+  // Specific dates: list of (date, seatsController)
+  final List<(DateTime, TextEditingController)> _specificEntries = [];
 
   // Weekly recurrence option
   final List<bool> _weekdays = List.filled(7, false);
@@ -55,23 +54,33 @@ class _PublishRoutePageState extends ConsumerState<PublishRoutePage> {
   @override
   void dispose() {
     _priceCtrl.dispose();
-    _specificSeatsCtrl.dispose();
     _weeklySeatsCtrl.dispose();
+    for (final e in _specificEntries) {
+      e.$2.dispose();
+    }
     super.dispose();
   }
 
   void _continue() {
     if (_step == 0 && !_validateStep0()) return;
     if (_step == 1 && !_validateStep1()) return;
+    if (_step == 2 && !_validateStep2()) return;
     if (_step < 3) {
-      if (_step == 2) {
-        // Pre-fill specific date with departure date when entering step 3
-        _specificDate ??= _departureDate;
+      if (_step == 2 && _specificEntries.isEmpty && _departureDate != null) {
+        _specificEntries.add((_departureDate!, TextEditingController(text: '1')));
       }
       setState(() => _step++);
     } else {
       _submit();
     }
+  }
+
+  bool _validateStep2() {
+    if (_selectedVehicle == null) {
+      _showError('Debes seleccionar un vehículo para continuar.');
+      return false;
+    }
+    return true;
   }
 
   bool _validateStep0() {
@@ -132,26 +141,19 @@ class _PublishRoutePageState extends ConsumerState<PublishRoutePage> {
 
       final created = await ref.read(routesApiProvider).createRoute(routeData);
 
-      if (_availKind == _AvailKind.specificDate) {
-        final date = _specificDate ?? _departureDate!;
-        final seats = int.tryParse(_specificSeatsCtrl.text.trim()) ?? 1;
-        if (seats < 1) {
-          _showError('Ingresa un número válido de cupos (mínimo 1).');
-          setState(() => _submitting = false);
-          return;
-        }
+      if (_availKind == _AvailKind.specificDate && _specificEntries.isNotEmpty) {
         await ref.read(routesApiProvider).addAvailabilityRule(
           created.id,
           {
             'kind': 'SPECIFIC_DATES',
-            'specificEntries': [
-              {
-                'date': DateTime(date.year, date.month, date.day)
-                    .toUtc()
-                    .toIso8601String(),
-                'seats': seats,
-              }
-            ],
+            'entries': _specificEntries
+                .map((e) => {
+                      'date': DateTime(e.$1.year, e.$1.month, e.$1.day)
+                          .toUtc()
+                          .toIso8601String(),
+                      'seats': int.tryParse(e.$2.text.trim()) ?? 1,
+                    })
+                .toList(),
           },
         );
       } else if (_availKind == _AvailKind.weekly &&
@@ -232,14 +234,40 @@ class _PublishRoutePageState extends ConsumerState<PublishRoutePage> {
     if (picked != null) setState(() => _departureTime = picked);
   }
 
-  Future<void> _pickSpecificDate() async {
+  Future<void> _addSpecificDate() async {
     final picked = await showDatePicker(
       context: context,
-      initialDate: _specificDate ?? _departureDate ?? DateTime.now(),
+      initialDate: DateTime.now(),
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );
-    if (picked != null) setState(() => _specificDate = picked);
+    if (picked != null && mounted) {
+      setState(() {
+        _specificEntries.add((picked, TextEditingController(text: '1')));
+      });
+    }
+  }
+
+  void _removeSpecificEntry(int index) {
+    setState(() {
+      _specificEntries[index].$2.dispose();
+      _specificEntries.removeAt(index);
+    });
+  }
+
+  Future<void> _editSpecificEntryDate(int index) async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _specificEntries[index].$1,
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+    );
+    if (picked != null && mounted) {
+      setState(() {
+        final ctrl = _specificEntries[index].$2;
+        _specificEntries[index] = (picked, ctrl);
+      });
+    }
   }
 
   Future<void> _pickRangeStart() async {
@@ -418,74 +446,69 @@ class _PublishRoutePageState extends ConsumerState<PublishRoutePage> {
   Widget _buildStep2() {
     final vehiclesAsync = ref.watch(vehiclesProvider);
 
-    return vehiclesAsync.when(
-      loading: () => const Padding(
-        padding: EdgeInsets.symmetric(vertical: 24),
+    Widget listContent;
+    if (vehiclesAsync.isLoading) {
+      listContent = const Padding(
+        padding: EdgeInsets.symmetric(vertical: 16),
         child: Center(child: CircularProgressIndicator()),
-      ),
-      error: (_, __) => const Padding(
-        padding: EdgeInsets.symmetric(vertical: 12),
-        child: Text('No se pudo cargar tus vehículos.'),
-      ),
-      data: (vehicles) => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (vehicles.isEmpty)
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withAlpha(15),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: AppColors.primary.withAlpha(50)),
-              ),
-              child: const Row(
-                children: [
-                  Icon(Icons.info_outline, color: AppColors.primary, size: 18),
-                  SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      'Aún no tienes vehículos. Puedes agregar uno ahora.',
-                      style: TextStyle(
-                          fontSize: 13, color: AppColors.primaryDark),
-                    ),
-                  ),
-                ],
-              ),
-            )
-          else ...[
-            _VehicleRadioTile(
-              title: 'Sin vehículo',
-              subtitle: 'No asociar vehículo a esta ruta',
-              icon: Icons.remove_circle_outline,
-              selected: _selectedVehicle == null,
-              onTap: () => setState(() => _selectedVehicle = null),
-            ),
-            const SizedBox(height: 8),
-            ...vehicles.map((v) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: _VehicleRadioTile(
-                title: '${v.brand} ${v.model}',
-                subtitle: '${v.plate} · ${v.color}',
-                icon: Icons.directions_car_outlined,
-                selected: _selectedVehicle?.id == v.id,
-                onTap: () => setState(() => _selectedVehicle = v),
-              ),
-            )),
-          ],
-          const SizedBox(height: 12),
-          OutlinedButton.icon(
-            onPressed: () => showAddVehicleSheet(context),
-            icon: const Icon(Icons.add, size: 18),
-            label: const Text('Agregar nuevo vehículo'),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.primary,
-              side: const BorderSide(color: AppColors.primary),
-              minimumSize: const Size(double.infinity, 44),
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
+      );
+    } else {
+      final vehicles = vehiclesAsync.valueOrNull ?? [];
+      if (vehicles.isEmpty) {
+        listContent = Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: AppColors.primary.withAlpha(15),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: AppColors.primary.withAlpha(50)),
           ),
-        ],
-      ),
+          child: const Row(
+            children: [
+              Icon(Icons.info_outline, color: AppColors.primary, size: 18),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Aún no tienes vehículos. Agrega uno con el botón de abajo.',
+                  style: TextStyle(fontSize: 13, color: AppColors.primaryDark),
+                ),
+              ),
+            ],
+          ),
+        );
+      } else {
+        listContent = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: vehicles.map((v) => Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: _VehicleRadioTile(
+              title: '${v.brand} ${v.model}',
+              subtitle: '${v.plate} · ${v.color}${v.year != null ? ' · ${v.year}' : ''}',
+              icon: Icons.directions_car_outlined,
+              selected: _selectedVehicle?.id == v.id,
+              onTap: () => setState(() => _selectedVehicle = v),
+            ),
+          )).toList(),
+        );
+      }
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        listContent,
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          onPressed: () => showAddVehicleSheet(context),
+          icon: const Icon(Icons.add, size: 18),
+          label: const Text('Agregar nuevo vehículo'),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: AppColors.primary,
+            side: const BorderSide(color: AppColors.primary),
+            minimumSize: const Size(double.infinity, 44),
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+        ),
+      ],
     );
   }
 
@@ -496,44 +519,75 @@ class _PublishRoutePageState extends ConsumerState<PublishRoutePage> {
         const _SectionLabel('Tipo de disponibilidad'),
         const SizedBox(height: 12),
 
-        // Option: none
+        // Option: specific dates
         _AvailOptionTile(
-          title: 'No agregar ahora',
-          subtitle: 'Puedes configurarlo luego desde "Mis rutas"',
-          icon: Icons.schedule_outlined,
-          selected: _availKind == _AvailKind.none,
-          onTap: () => setState(() => _availKind = _AvailKind.none),
-        ),
-        const SizedBox(height: 8),
-
-        // Option: specific date
-        _AvailOptionTile(
-          title: 'Fecha específica',
-          subtitle: 'Un día puntual con cupos disponibles',
+          title: 'Fechas específicas',
+          subtitle: 'Uno o varios días puntuales con cupos',
           icon: Icons.event_outlined,
           selected: _availKind == _AvailKind.specificDate,
-          onTap: () => setState(() {
-            _availKind = _AvailKind.specificDate;
-            _specificDate ??= _departureDate;
-          }),
+          onTap: () => setState(() => _availKind = _AvailKind.specificDate),
         ),
         if (_availKind == _AvailKind.specificDate) ...[
           const SizedBox(height: 12),
-          _PickerTile(
-            icon: Icons.calendar_today_outlined,
-            label: _specificDate == null
-                ? 'Seleccionar fecha'
-                : _fmtDate(_specificDate!),
-            onTap: _pickSpecificDate,
-            filled: _specificDate != null,
-          ),
-          const SizedBox(height: 10),
-          TextFormField(
-            controller: _specificSeatsCtrl,
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              labelText: 'Cupos disponibles',
-              prefixIcon: Icon(Icons.event_seat_outlined),
+          if (_specificEntries.isEmpty)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(
+                'No hay fechas agregadas.',
+                style: TextStyle(
+                    fontSize: 13, color: AppColors.textHint),
+              ),
+            ),
+          ...List.generate(_specificEntries.length, (i) {
+            final entry = _specificEntries[i];
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Row(
+                children: [
+                  Expanded(
+                    flex: 5,
+                    child: _PickerTile(
+                      icon: Icons.calendar_today_outlined,
+                      label: _fmtDate(entry.$1),
+                      onTap: () => _editSpecificEntryDate(i),
+                      filled: true,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    flex: 3,
+                    child: TextFormField(
+                      controller: entry.$2,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: 'Cupos',
+                        prefixIcon: Icon(Icons.event_seat_outlined, size: 16),
+                        contentPadding: EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 14),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  IconButton(
+                    icon: const Icon(Icons.remove_circle_outline,
+                        color: AppColors.error, size: 20),
+                    onPressed: () => _removeSpecificEntry(i),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                ],
+              ),
+            );
+          }),
+          OutlinedButton.icon(
+            onPressed: _addSpecificDate,
+            icon: const Icon(Icons.add, size: 16),
+            label: const Text('Agregar fecha'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColors.primary,
+              side: const BorderSide(color: AppColors.primary),
+              minimumSize: const Size(double.infinity, 40),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
           ),
         ],

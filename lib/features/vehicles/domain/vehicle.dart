@@ -6,6 +6,7 @@ class Vehicle {
     required this.brand,
     required this.model,
     required this.color,
+    this.year,
   });
 
   final String id;
@@ -14,6 +15,7 @@ class Vehicle {
   final String brand;
   final String model;
   final String color;
+  final int? year;
 
   factory Vehicle.fromJson(Map<String, dynamic> json) => Vehicle(
         id: (json['id'] ?? json['_id'] ?? '').toString(),
@@ -22,6 +24,7 @@ class Vehicle {
         brand: (json['brand'] ?? '').toString(),
         model: (json['model'] ?? '').toString(),
         color: (json['color'] ?? '').toString(),
+        year: (json['year'] as num?)?.toInt(),
       );
 
   Map<String, dynamic> toJson() => {
@@ -30,6 +33,7 @@ class Vehicle {
         'brand': brand,
         'model': model,
         'color': color,
+        if (year != null) 'year': year,
       };
 
   String get displayName => '$brand $model ($plate)';

@@ -30,12 +30,14 @@ class VehiclesNotifier extends AsyncNotifier<List<Vehicle>> {
   Future<List<Vehicle>> build() async {
     final user = await ref.watch(authControllerProvider.future);
     if (user == null) return [];
-    return ref.read(profileApiProvider).getMyVehicles(user.id);
+    return ref.read(profileApiProvider).getMyVehicles();
   }
 
   Future<void> addVehicle(Map<String, dynamic> data) async {
     final vehicle = await ref.read(profileApiProvider).createVehicle(data);
-    state = state.whenData((list) => [...list, vehicle]);
+    // Use valueOrNull so this works even when the initial fetch failed
+    final current = state.valueOrNull ?? [];
+    state = AsyncValue.data([...current, vehicle]);
   }
 
   Future<void> deleteVehicle(String id) async {

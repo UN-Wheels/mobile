@@ -114,9 +114,12 @@ class MessagesNotifier
         socket.markDelivered(conversationId, m.id);
       }
       if (state.hasValue) {
-        state = state.whenData((list) => [m, ...list]);
+        state = state.whenData((list) {
+          if (list.any((e) => e.id == m.id)) return list;
+          return [m, ...list];
+        });
       } else {
-        buffer.add(m);
+        if (!buffer.any((e) => e.id == m.id)) buffer.add(m);
       }
     });
 
